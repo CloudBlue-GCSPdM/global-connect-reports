@@ -35,3 +35,35 @@ def get_value(base, prop, value):
     if prop in base:
         return get_basic_value(base[prop], value)
     return '-'
+
+
+def get_first_day_month(date: datetime):
+    return datetime(date.year, date.month, 1, 0, 0, 0)
+
+
+def get_next_month_anniversary(date: datetime):
+    if date.month == 12:
+        return datetime(date.year + 1, 1, date.day, 0, 0, 0)
+    if date.month == 1 and date.day > 28:
+        return datetime(date.year, date.month + 1, 28, 0, 0, 0)
+    if date.day > 30 and (date.month == 3 or date.month == 5 or date.month == 8 or date.month == 10):
+        return datetime(date.year, date.month + 1, 30, 0, 0, 0)
+    return datetime(date.year, date.month + 1, date.day, 0, 0, 0)
+
+
+def get_next_year_anniversary(date: datetime, years_to_add):
+    if date.month == 2 and date.day == 29:
+        return datetime(date.year + years_to_add, date.month, 28, 0, 0, 0)
+    return datetime(date.year + years_to_add, date.month, date.day, 0, 0, 0)
+
+
+class MonthlyBillingItem:
+    def __init__(self, item_mpn, item_period, item_display_name, quantity, unit_msrp, unit_cost, msrp, cost):
+        self.Item_mpn = item_mpn
+        self.Period = item_period
+        self.Item_name = item_display_name
+        self.Quantity = quantity
+        self.Unit_Cost = unit_cost
+        self.Unit_Msrp = unit_msrp
+        self.Msrp = msrp
+        self.Cost = cost

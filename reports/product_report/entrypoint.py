@@ -15,6 +15,7 @@ HEADERS = ['Vendor ID', 'Vendor Name', 'Product ID', 'Product Name', 'Product St
 
 PRODUCTS = {}
 
+PRODUCT_ITEMS = {}
 
 def generate(client, parameters, progress_callback):
     products = _get_products(client, parameters)
@@ -46,6 +47,8 @@ def generate(client, parameters, progress_callback):
         if vendor_id not in PRODUCTS.keys():
             PRODUCTS[vendor_id] = {'products': []}
         PRODUCTS[vendor_id]['products'].append(product)
+        items = list(_get_items(client, product['id']))
+        PRODUCT_ITEMS[product['id']] = items
 
     if progress == 0:
         yield HEADERS
@@ -62,6 +65,7 @@ def generate(client, parameters, progress_callback):
 
         for product in products:
             items = _get_items(client, product['id'])
+            items = PRODUCT_ITEMS[product['id']]
             for item in items:
                 yield (
                     vendor_id,  # Vendor ID
@@ -102,6 +106,8 @@ def generate(client, parameters, progress_callback):
 
 def _get_products(client, parameters):
     query = R()
+    if parameters.get('product') and parameters['product']['all'] is False:
+        query &= R().id.oneof(parameters['product']['choices'])
     if parameters.get('product_status') and parameters['product_status']['all'] is False:
         query &= R().status.oneof(parameters['product_status']['choices'])
 
