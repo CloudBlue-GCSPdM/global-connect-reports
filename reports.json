@@ -285,58 +285,6 @@
       ]
     },
     {
-      "name": "Listed Product per Listing Creation Date",
-      "readme_file": "reports/listed_products_report/README.md",
-      "template": "reports/listed_products_report/templates/xlsx/template.xlsx",
-      "start_row": 1,
-      "start_col": 1,
-      "entrypoint": "reports.listed_products_report.entrypoint.generate",
-      "audience": [
-        "provider"
-      ],
-      "report_spec": "1",
-      "parameters": [
-        {
-          "id": "date",
-          "type": "date_range",
-          "name": "Report period",
-          "description": "Provide the Listing Creation Date period for the report",
-          "required": true
-        },
-        {
-          "id": "product",
-          "type": "product",
-          "name": "Product list",
-          "description": "Select the products you want to include in the report",
-          "required": true
-        },
-        {
-          "id": "product_status",
-          "type": "checkbox",
-          "name": "Product Status",
-          "required": true,
-          "description": "Select Product Status you want to include in report",
-          "choices": [
-            {
-              "value": "published",
-              "label": "Active"
-            },
-            {
-              "value": "endofsale",
-              "label": "End of Sale"
-            }
-          ]
-        },
-        {
-          "id": "mkp",
-          "type": "marketplace",
-          "name": "Marketplaces",
-          "required": true,
-          "description": "Select the marketplaces you want to include in the report"
-        }
-      ]
-    },
-    {
       "name": "Failure Rate Report per Creation Date, Product, Marketplace and Environment",
       "readme_file": "reports/failure_rate_report/README.md",
       "entrypoint": "reports.failure_rate_report.entrypoint.generate",
