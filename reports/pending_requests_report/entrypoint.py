@@ -88,7 +88,6 @@ def generate(client, parameters, progress_callback):
                     ),
                     get_basic_value(request, 'type'),  # Transaction Type,
                     get_basic_value(request['asset']['connection'], 'type'),  # Connection Type,
-                    '',  # Country
                     today_str(),  # Exported At
                 )
                 continue
