@@ -292,8 +292,7 @@
       "start_col": 1,
       "entrypoint": "reports.listed_products_report.entrypoint.generate",
       "audience": [
-        "provider",
-        "vendor"
+        "provider"
       ],
       "report_spec": "1",
       "parameters": [
