@@ -66,12 +66,13 @@ def generate(client, parameters, progress_callback):
                 yield (
                     vendor_id,  # Vendor ID
                     product['vendor_name'],  # Vendor Name
-                    "-" ,
-                    "-" ,
+                    "-",  # Tech Contact
+                    "-",  # Business Contact
                     product['id'],  # Product ID
                     product['product_name'],  # Product Name
                     product['status'],  # Product Status
                     product['version'],  # Product Version
+                    '',  # Last Version Date
                     product['category'],  # Category
                     product['description'],  # Product Description
                     product['suspend_resume'],  # Supports Suspend
