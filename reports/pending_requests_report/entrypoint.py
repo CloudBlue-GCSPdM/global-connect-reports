@@ -34,7 +34,6 @@ def generate(client, parameters, progress_callback):
     :type progress_callback: func
     """
     requests = _get_requests(client, parameters)
-
     progress = 0
     total = requests.count() + 1
 
