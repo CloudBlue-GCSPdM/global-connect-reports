@@ -74,34 +74,6 @@
           ]
         }
       ]
-    },{
-      "name": "Product configuration parameters",
-      "readme_file": "reports/configuration_param_report/README.md",
-      "template": "reports/configuration_param_report/xlsx/template.xlsx",
-      "start_row": 1,
-      "start_col": 1,
-      "entrypoint": "reports.configuration_param_report.entrypoint.generate",
-      "audience": [
-        "provider",
-        "vendor"
-      ],
-      "report_spec": "1",
-      "parameters": [
-        {
-          "id": "product",
-          "type": "single_line",
-          "name": "Product",
-          "description": "Add one PRD-###-### to be included in the report",
-          "required": true
-        },
-        {
-          "id": "mkp",
-          "type": "marketplace",
-          "name": "Marketplaces",
-          "required": true,
-          "description": "Select the marketplaces you want to include in the report"
-        }
-      ]
     },
     {
       "name": "Fulfillment Requests Report per Creation Date, Product, Marketplace and Environment",
