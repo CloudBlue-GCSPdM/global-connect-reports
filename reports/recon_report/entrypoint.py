@@ -110,7 +110,7 @@ def generate(
 
                     else:
                         # Solo las anuales para reporte Dell
-                        if period.lower().__contains__('year'):
+                        if period.lower().__contains__('month'):
                             continue
 
                         date_period: datetime = start
