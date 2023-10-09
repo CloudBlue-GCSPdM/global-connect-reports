@@ -39,6 +39,13 @@
           "required": false
         },
         {
+          "id": "provider_to_exclude",
+          "type": "single_line",
+          "name": "Provider to Exclude Id",
+          "description": "Optionally add one PA-###-### to be excluded from the report",
+          "required": false
+        },
+        {
           "id": "mkp",
           "type": "marketplace",
           "name": "Marketplaces",
@@ -65,6 +72,34 @@
               "label": "Preview"
             }
           ]
+        }
+      ]
+    },{
+      "name": "Product configuration parameters",
+      "readme_file": "reports/configuration_param_report/README.md",
+      "template": "reports/configuration_param_report/xlsx/template.xlsx",
+      "start_row": 1,
+      "start_col": 1,
+      "entrypoint": "reports.configuration_param_report.entrypoint.generate",
+      "audience": [
+        "provider",
+        "vendor"
+      ],
+      "report_spec": "1",
+      "parameters": [
+        {
+          "id": "product",
+          "type": "single_line",
+          "name": "Product",
+          "description": "Add one PRD-###-### to be included in the report",
+          "required": true
+        },
+        {
+          "id": "mkp",
+          "type": "marketplace",
+          "name": "Marketplaces",
+          "required": true,
+          "description": "Select the marketplaces you want to include in the report"
         }
       ]
     },
@@ -230,7 +265,8 @@
       "start_col": 1,
       "entrypoint": "reports.product_report.entrypoint.generate",
       "audience": [
-        "provider"
+        "provider",
+        "vendor"
       ],
       "report_spec": "1",
       "parameters": [
@@ -337,6 +373,59 @@
       ]
     },
     {
+      "name": "Tier Configurations active by Product and Marketplace",
+      "readme_file": "reports/tier_config_report/Readme.md",
+      "template": "reports/tier_config_report/template.xlsx",
+      "start_row": 2,
+      "start_col": 1,
+      "entrypoint": "reports.tier_config_report.entrypoint.generate",
+      "audience": [
+        "vendor",
+        "provider"
+      ],
+      "report_spec": "1",
+      "parameters": [
+        {
+          "id": "product",
+          "type": "product",
+          "name": "Product list",
+          "description": "Select the products you want to include in the report",
+          "required": true
+        },
+        {
+          "id": "mkp",
+          "type": "marketplace",
+          "name": "Marketplaces",
+          "required": true,
+          "description": "Select the marketplaces you want to include in the report"
+        },
+        {
+          "id": "parameter_id",
+          "type": "single_line",
+          "name": "Parameter Id",
+          "description": "Optionally add up to 2 subscription parameters id separated by | to be included in the report",
+          "required": false
+        },
+        {
+          "id": "connexion_type",
+          "type": "checkbox",
+          "name": "Type of Environment",
+          "required": true,
+          "description": "Select the type of environment you want to include in report",
+          "choices": [
+            {
+              "value": "production",
+              "label": "Production"
+            },
+            {
+              "value": "test",
+              "label": "Test"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "Failure Rate Report per Creation Date, Product, Marketplace and Environment",
       "readme_file": "reports/failure_rate_report/README.md",
       "entrypoint": "reports.failure_rate_report.entrypoint.generate",
@@ -385,6 +474,13 @@
               "label": "Draft"
             }
           ]
+        },
+        {
+          "id": "parameter_id",
+          "type": "single_line",
+          "name": "Parameter Id",
+          "description": "Optionally add up to 2 subscription parameters id separated by | to be included in the report",
+          "required": false
         },
         {
           "id": "product",
@@ -441,6 +537,187 @@
           "description": "Export data as Excel"
         }
       ]
-    }
+    },
+    {
+      "name": "Approved Requests per vendor",
+      "readme_file": "reports/approved_requests/README.md",
+      "entrypoint": "reports.approved_requests.entrypoint.generate",
+      "audience": [
+        "provider",
+        "vendor"
+      ],
+      "report_spec": "2",
+      "parameters": [
+        {
+          "id": "date",
+          "type": "date_range",
+          "name": "Report period",
+          "description": "Provide the requests creation date period for the report",
+          "required": true
+        },
+        {
+          "id": "product",
+          "type": "product",
+          "name": "Product list",
+          "description": "Select the products you want to include in report",
+          "required": true
+        },
+        {
+          "id": "mkp",
+          "type": "marketplace",
+          "name": "Marketplaces",
+          "required": true,
+          "description": "Select the marketplaces you want to include in the report"
+        },
+        {
+          "id": "rr_type",
+          "type": "checkbox",
+          "name": "Request type",
+          "description": "Select the type of the requests you want to include in the report",
+          "required": true,
+          "choices": [
+            {
+              "value": "purchase",
+              "label": "Purchase"
+            },
+            {
+              "value": "change",
+              "label": "Change"
+            },
+            {
+              "value": "suspend",
+              "label": "Suspend"
+            },
+            {
+              "value": "resume",
+              "label": "Resume"
+            },
+            {
+              "value": "cancel",
+              "label": "Cancel"
+            },
+            {
+              "value": "adjustment",
+              "label": "Adjustment"
+            }
+          ]
+        },
+        {
+          "id": "connexion_type",
+          "type": "checkbox",
+          "name": "Type of Environment",
+          "required": true,
+          "description": "Select the type of environment you want to include in report",
+          "choices": [
+            {
+              "value": "production",
+              "label": "Production"
+            },
+            {
+              "value": "test",
+              "label": "Test"
+            },
+            {
+              "value": "preview",
+              "label": "Preview"
+            }
+          ]
+        }
+      ],
+      "renderers": [
+        {
+          "id": "xlsx",
+          "type": "xlsx",
+          "default": true,
+          "description": "Export data in Microsoft Excel 2020 format.",
+          "template": "reports/approved_requests/templates/template.xlsx",
+          "args": {
+            "start_row": 2,
+            "start_col": 1
+          }
+        }
+      ]
+    },
+    {
+            "name": "Reconcile Subscriptions by creation Dates until Date",
+            "readme_file": "reports/recon_report/README.md",
+            "entrypoint": "reports.recon_report.entrypoint.generate",
+            "audience": [
+                "vendor"
+            ],
+            "report_spec": "2",
+            "parameters": [
+                {
+                   "id":"date",
+                   "type":"date_range",
+                   "name":"Report period",
+                   "description":"Provide the subscriptions creation date period for the report",
+                   "required":true
+                },
+                {
+                   "id": "product",
+                   "type": "product",
+                   "name": "Product list",
+                   "description": "Select the products you want to include in the report",
+                   "required": true
+                },
+                {
+                   "id": "mkp",
+                   "type": "marketplace",
+                   "name": "Marketplaces",
+                   "required": false,
+                   "description": "Optionally select the marketplaces you want to include in the report"
+                },
+                {
+                   "id": "hub",
+                   "type": "single_line",
+                   "name": "Hub",
+                   "required": false,
+                   "description": "Optionally enter the Hubs you want to include in the report (HB-####-####) separated by |"
+                },
+                {
+                   "id": "connexion_type",
+                   "type": "checkbox",
+                   "name": "Type of Environment",
+                   "required": true,
+                   "description": "Select the type of environment you want to include in report",
+                   "choices": [
+                      {
+                         "value": "production",
+                         "label": "Production"
+                      },
+                      {
+                         "value": "test",
+                         "label": "Test"
+                      }
+                   ]
+                }
+            ],
+            "renderers": [
+                {
+                    "id": "xlsx",
+                    "type": "xlsx",
+                    "default": true,
+                    "description": "Export data in Microsoft Excel 2020 format.",
+                    "template": "reports/recon_report/templates/xlsx/template.xlsx",
+                    "args": {
+                        "start_row": 2,
+                        "start_col": 1
+                    }
+                },
+                {
+                    "id": "json",
+                    "type": "json",
+                    "default": false,
+                    "description": "Export data as JSON"
+                },
+                {
+                    "id": "csv",
+                    "type": "csv",
+                    "default": false,
+                    "description": "Export data as CSV"
+                }
+            ]
+        }
   ]
 }
