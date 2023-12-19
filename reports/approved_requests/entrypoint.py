@@ -15,7 +15,7 @@ NCE_PARAMS = ['subscription_id', 'csp_order_id', 'nce_migration_id', 'migration_
 ADOBE_PRODUCT = 'PRD-463-843-541'
 AZURE_PRODUCT = 'PRD-561-716-033'
 
-AZURE_PRODUCT_ID= 'DZH318Z0BPS6'
+AZURE_PRODUCT_ID = 'DZH318Z0BPS6'
 
 
 def generate(client, parameters, progress_callback, renderer_type=None, extra_context=None, ):
@@ -85,7 +85,7 @@ def generate(client, parameters, progress_callback, renderer_type=None, extra_co
                 utils.get_basic_value(item, 'quantity'),  # Cumulative Seat
                 delta_str,  # Order Delta
                 utils.get_value(request['asset']['tiers'], 'tier1', 'id'),  # Reseller ID
-                utils.get_value(request['asset']['tiers'], 'tier1', 'external_id'),  # Reseller External ID
+                utils.get_value(request['asset']['tiers'], 'tier1', 'external_uid'),  # Reseller External ID
                 utils.get_value(request['asset']['tiers'], 'tier1', 'name'),  # Reseller Name
                 utils.get_value(request['asset']['tiers'], 'customer', 'name'),  # End Customer Name
                 utils.get_value(request['asset']['tiers'], 'customer', 'external_id'),  # End Customer External ID
