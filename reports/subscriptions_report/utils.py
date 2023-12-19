@@ -67,3 +67,12 @@ class MonthlyBillingItem:
         self.Unit_Msrp = unit_msrp
         self.Msrp = msrp
         self.Cost = cost
+
+def get_usage_record_param_value(params: list, value: str) -> str:
+    try:
+        if params[0]['parameter_name'] == value:
+            return params[0]['parameter_value']
+        if len(params) == 1:
+            return '-'
+    except Exception:
+        return '-'

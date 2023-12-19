@@ -173,6 +173,56 @@
       ]
     },
     {
+      "name": "Usage Records Report per Date, Product, Marketplace and Environment",
+      "readme_file": "reports/usage_records_report/README.md",
+      "template": "reports/usage_records_report/xlsx/template.xlsx",
+      "start_row": 1,
+      "start_col": 1,
+      "entrypoint": "reports.usage_records_report.entrypoint.generate",
+      "audience": [
+        "provider",
+        "vendor"
+      ],
+      "report_spec": "1",
+      "parameters": [
+        {
+          "id": "date",
+          "type": "date_range",
+          "name": "Report period",
+          "description": "Provide the usage records creation date period for the report",
+          "required": true
+        },
+        {
+          "id": "ur_status",
+          "type": "checkbox",
+          "name": "Usage Record Status",
+          "description": "Optionally select the Usage Record Status you want to include in the report",
+          "required": true,
+          "choices": [
+            {
+              "value": "valid",
+              "label": "Valid"
+            },
+            {
+              "value": "approved",
+              "label": "Approved"
+            },
+            {
+              "value": "closed",
+              "label": "Closed"
+            }
+          ]
+        },
+        {
+          "id": "product",
+          "type": "product",
+          "name": "Product list",
+          "description": "Select the Products linked to the Usage Records you want to include in the report",
+          "required": true
+        }
+      ]
+    },
+    {
       "name": "Fulfillment Requests in Pending status per Creation Date, Product, Marketplace and Environment",
       "readme_file": "reports/pending_requests_report/README.md",
       "template": "reports/pending_requests_report/templates/xlsx/template.xlsx",

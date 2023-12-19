@@ -13,6 +13,9 @@ ADOBE_PARAMS = ['adobe_vip_number', 'adobe_order_id', 'transfer_id', 'action_typ
 NCE_PARAMS = ['subscription_id', 'csp_order_id', 'nce_migration_id', 'migration_type', 'microsoft_domain',
               'ms_customer_id', 'cart_id']
 ADOBE_PRODUCT = 'PRD-463-843-541'
+AZURE_PRODUCT = 'PRD-561-716-033'
+
+AZURE_PRODUCT_ID= 'DZH318Z0BPS6'
 
 
 def generate(client, parameters, progress_callback, renderer_type=None, extra_context=None, ):
@@ -42,17 +45,29 @@ def generate(client, parameters, progress_callback, renderer_type=None, extra_co
             param_currency = utils.get_param_value(request['asset']['configuration']['params'], 'Adobe_Currency')
 
         else:
-            param_subscription_number = utils.get_param_value(parameters_list, 'subscription_id')
-            param_order_number = utils.get_param_value(parameters_list, 'csp_order_id')
-            param_transfer_number = utils.get_param_value(parameters_list, 'nce_migration_id')
-            param_action = utils.get_param_value(parameters_list, 'migration_type')
-            param_user_email = utils.get_param_value(parameters_list, 'microsoft_domain')
-            param_cloud_program_id = utils.get_param_value(parameters_list, 'ms_customer_id')
+            if product_id == AZURE_PRODUCT:
+                param_subscription_number = utils.get_param_value(parameters_list, 'microsoft_subscription_id')
+                param_order_number = utils.get_param_value(parameters_list, 'microsoft_order_id')
+                param_transfer_number = utils.get_param_value(parameters_list, 'nce_migration_id')
+                param_action = utils.get_param_value(parameters_list, 'migration_type')
+                param_user_email = utils.get_param_value(parameters_list, 'microsoft_domain')
+                param_cloud_program_id = utils.get_param_value(parameters_list, 'customer_id')
+            else:
+                param_subscription_number = utils.get_param_value(parameters_list, 'subscription_id')
+                param_order_number = utils.get_param_value(parameters_list, 'csp_order_id')
+                param_transfer_number = utils.get_param_value(parameters_list, 'nce_migration_id')
+                param_action = utils.get_param_value(parameters_list, 'migration_type')
+                param_user_email = utils.get_param_value(parameters_list, 'microsoft_domain')
+                param_cloud_program_id = utils.get_param_value(parameters_list, 'ms_customer_id')
 
         for item in request['asset']['items']:
             delta_str = _get_delta_str(item)
             if delta_str == '':
                 continue
+
+            sku = utils.get_basic_value(item, 'mpn'),
+            if product_id == AZURE_PRODUCT:
+                sku = AZURE_PRODUCT_ID
 
             yield (
                 utils.get_basic_value(request, 'id'),  # Request ID
@@ -65,7 +80,7 @@ def generate(client, parameters, progress_callback, renderer_type=None, extra_co
                 param_cloud_program_id,  # Adobe Cloud Program ID
                 param_discount_level,  # Pricing SKU Level (Volume Discount level)
                 utils.get_basic_value(item, 'display_name'),  # Product Description
-                utils.get_basic_value(item, 'mpn'),  # Part Number
+                sku,  # Part Number
                 utils.get_basic_value(item, 'period'),  # Product Period
                 utils.get_basic_value(item, 'quantity'),  # Cumulative Seat
                 delta_str,  # Order Delta
