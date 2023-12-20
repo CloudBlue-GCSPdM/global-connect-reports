@@ -128,13 +128,13 @@ def generate(client, parameters, progress_callback):
 def _get_usage_records(client, parameters):
     query = R()
     query &= R().start_date.ge(parameters['date']['after'])
-    query &= R().start_date.le(parameters['date']['before'])
+    query &= R().end_date.le(parameters['date']['before'])
 
     if parameters.get('product') and parameters['product']['all'] is False:
         query &= R().product_id.oneof(parameters['product']['choices'])
 
     if parameters.get('ur_status') and parameters['ur_status']['all'] is False:
-        query &= R().product_id.oneof(parameters['ur_status']['choices'])
+        query &= R().status.oneof(parameters['ur_status']['choices'])
     else:
         query &= R().status.oneof(['valid', 'approved', 'closed'])
 
