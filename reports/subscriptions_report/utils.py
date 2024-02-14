@@ -37,6 +37,19 @@ def get_value(base, prop, value):
     return '-'
 
 
+def get_param_value(params: list, value: str) -> str:
+    try:
+        if params[0]['id'] == value:
+            return params[0]['value']
+        if params[0]['name'] == value:
+            return params[0]['value']
+        if len(params) == 1:
+            return '-'
+        return get_param_value(list(params[1:]), value)
+    except Exception:
+        return '-'
+
+
 def get_first_day_month(date: datetime):
     return datetime(date.year, date.month, 1, 0, 0, 0)
 
