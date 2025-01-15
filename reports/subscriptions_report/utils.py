@@ -81,6 +81,7 @@ class MonthlyBillingItem:
         self.Msrp = msrp
         self.Cost = cost
 
+
 def get_usage_record_param_value(params: list, value: str) -> str:
     try:
         if params[0]['parameter_name'] == value:
@@ -89,3 +90,22 @@ def get_usage_record_param_value(params: list, value: str) -> str:
             return '-'
     except Exception:
         return '-'
+
+
+def parameter_value(parameter_id, parameter_list, default="-"):
+    try:
+        parameter = list(filter(lambda param: param['id'] == parameter_id, parameter_list))[0]
+        return parameter['value']
+    except IndexError:
+        return default
+
+
+def get_price(price_data):
+    if not price_data:
+        return '-'
+    nanos = price_data.get('nanos')
+    units = price_data.get('units')
+    currency = price_data.get('currency_code')
+    total = float(units) + float(nanos) / 10 ** 9
+
+    return "{:0.2f} {}".format(total, currency)
