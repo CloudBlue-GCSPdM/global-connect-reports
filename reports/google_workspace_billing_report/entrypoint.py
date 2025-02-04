@@ -1,31 +1,39 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (c) 2024, CloudBlue
+# Copyright (c) 2023, CloudBlue
 # All rights reserved.
 #
-import datetime
 
 from connect.client import R
-from dateutil.relativedelta import relativedelta
 
 from reports.http import GoogleAPIClient, GoogleAPIClientError, obtain_url_for_service
 from reports.subscriptions_report.utils import convert_to_datetime, get_value, parameter_value, get_price
 
 HEADERS = (
-    'Month Year', 'Subscription ID', 'Subscription External ID', 'Subscription External UUID',
-    'Vendor Subscription ID', 'Charge Type', 'Item Name', 'Item MPN',
-    'Item Period', 'Quantity', 'Consumption', 'Price', 'Cost', 'Discount',
-    'Customer Name', 'Customer External ID', 'Customer Email', 'Tier1 Name', 'Tier1 External ID',
-    'Marketplace', 'Hub Name', 'Product Name', 'Charge Date',
-    'Subscription Status', 'Subscription Start Date', 'Subscription End Date',
-    'Exported At', 'Error Details',
+    'Subscription ID', 'Subscription External ID', 'Google Entitlement ID',
+    'Subscription Type', 'Purchase Type', 'Google Domain', 'Google Customer ID', 'Item Name', 'Item MPN',
+    'Google SKU', 'Google Product', 'Google Offer ID', 'Google Offer SKU Display Name',
+    'Subscription ID', 'Subscription External ID', 'Google Entitlement ID',
+    'Subscription Type', 'Purchase Type', 'Google Domain', 'Google Customer ID', 'Item Name', 'Item MPN',
+    'Google SKU', 'Google Product', 'Google Offer ID', 'Google Offer SKU Display Name',
+    'Item Quantity', 'Consumption', 'Google Num Units', 'Google Maximum Units', 'Google Assigned Units',
+    'Google Offer Effective Price', 'Google Offer Price',
+    'Creation date', 'Updated date', 'Google Creation Time', 'Google Commitment Start Date',
+    'Google Commitment End Date', 'Google Renewal Enabled', 'Status', 'Google Entitlement Status',
+    'Google Suspension Reasons', 'Google Purchase Order ID', 'Billing Period',
+    'Anniversary Day', 'Anniversary Month', 'Contract ID', 'Contract Name',
+    'Customer ID', 'Customer Name', 'Customer External ID',
+    'Tier 1 ID', 'Tier 1 Name', 'Tier 1 External ID',
+    'Tier 2 ID', 'Tier 2 Name', 'Tier 2 External ID',
+    'Provider Account ID', 'Provider Account name',
+    'Vendor Account ID', 'Vendor Account Name',
+    'Product ID', 'Product Name', 'Hub ID', 'Hub Name',
+    'Error Details',
 )
 
 GOOGLE_PRODUCTS = ['PRD-861-570-450', 'PRD-550-104-278']
-DATE_RANGE_LIMIT_IN_MONTHS = 2
 
 subscriptions_dict = {}
-exported_at = datetime.datetime.now()
 
 
 def generate(
@@ -35,200 +43,63 @@ def generate(
         renderer_type=None,
         extra_context_callback=None,
 ):
-    try:
-        _check_report_constraints(parameters)
-        url_for_service = obtain_url_for_service(client)
-        marketplace_id = parameters['mkp']['choices'][0] if parameters.get('mkp').get('choices') else ""
-        google_client = GoogleAPIClient(client, url_for_service, marketplace_id)
+    subscriptions = _get_subscriptions(client, parameters)
+    url_for_service = obtain_url_for_service(client)
+    marketplace_id = parameters['mkp']['choices'][0] if parameters.get('mkp').get('choices') else ""
+    google_client = GoogleAPIClient(client, url_for_service, marketplace_id)
+    total = subscriptions.count()
+    progress = 0
+    if renderer_type == 'csv':
+        yield HEADERS
+        progress += 1
+        total += 1
+        progress_callback(progress, total)
 
-        subscriptions = _get_subscriptions(client, parameters)
-        total = len(subscriptions)
-        progress = 0
-        if renderer_type == 'csv':
-            yield HEADERS
-            progress += 1
-            total += 1
-            progress_callback(progress, total)
+    for subscription in subscriptions:
+        if renderer_type == 'json':
+            yield {
+                HEADERS[idx].replace(' ', '_').lower(): value
+                for idx, value in enumerate(_process_line(subscription, google_client, client))
+            }
+        else:
+            yield _process_line(subscription, google_client, client)
 
-        for subscription in subscriptions:
-            orders = _get_orders(subscription, google_client, client, parameters)
-            for order in orders:
-                if renderer_type == 'json':
-                    yield {
-                        HEADERS[idx].replace(' ', '_').lower(): value
-                        for idx, value in enumerate(_process_line(order))
-                    }
-                else:
-                    yield _process_line(order)
-
-            progress += 1
-            progress_callback(progress, total)
-    except Exception as e:
-        error_row = ['-' for _ in HEADERS]
-        error_row[-1] = str(e)
-        yield error_row
-        progress_callback(1, 1)
-        return
-
-
-def _check_report_constraints(params):
-    for product in params.get('product', {}).get('choices'):
-        if product not in GOOGLE_PRODUCTS:
-            raise ReportException('Not all products are google products')
-
-    date_before = convert_to_datetime(params['date']['before'].replace('Z', ''))
-    date_after = convert_to_datetime(params['date']['after'].replace('Z', ''))
-    date_range = (date_before.year - date_after.year) * 12 + date_before.month - date_after.month
-    if date_range > DATE_RANGE_LIMIT_IN_MONTHS:
-        raise ReportException(f'Date range must not exceed {DATE_RANGE_LIMIT_IN_MONTHS}-month range')
-
-
-def _get_active_subscriptions(client, parameters):
-    query = R()
-    if parameters.get('product') and parameters['product']['all'] is False:
-        query &= R().product.id.oneof(parameters['product']['choices'])
-    if parameters.get('date') and parameters['date']['after'] != '':
-        query &= R().events.created.at.le(parameters['date']['before'])
-    if parameters.get('mkp') and parameters['mkp']['all'] is False:
-        query &= R().marketplace.id.oneof(parameters['mkp']['choices'])
-    if parameters.get('connection_type') and parameters['connection_type']['all'] is False:
-        query &= R().asset.connection.type.oneof(parameters['connection_type']['choices'])
-    query &= R().status.oneof(['active', 'suspended', 'terminating'])
-
-    return client.ns('subscriptions').assets.filter(query)
-
-
-def _get_terminated_subscriptions(client, parameters):
-    query = R()
-    query &= R().product.id.oneof(GOOGLE_PRODUCTS)
-    if parameters.get('date') and parameters['date']['after'] != '':
-        query &= R().events.updated.at.ge(parameters['date']['after'])
-        query &= R().events.created.at.le(parameters['date']['before'])
-    if parameters.get('mkp') and parameters['mkp']['all'] is False:
-        query &= R().marketplace.id.oneof(parameters['mkp']['choices'])
-    if parameters.get('connection_type') and parameters['connection_type']['all'] is False:
-        query &= R().asset.connection.type.oneof(parameters['connection_type']['choices'])
-    query &= R().status.oneof(['terminated'])
-
-    return client.ns('subscriptions').assets.filter(query)
+    progress += 1
+    progress_callback(progress, total)
 
 
 def _get_subscriptions(client, parameters):
-    subscriptions = list(_get_active_subscriptions(client, parameters))
-    terminated = list(_get_terminated_subscriptions(client, parameters))
-    subscriptions.extend(terminated)
-
-    return subscriptions
-
-
-def _get_orders(subscription, google_client, connect_client, params):
-    entitlement_id = get_entitlement_id(subscription.get('params', []))
-    subscription_id = subscription.get('id')
-    google_subscription = _process_google_subscription(subscription, google_client)
     query = R()
-    query &= R().updated.ge(params['date']['after'])
-    query &= R().updated.le(params['date']['before'])
-    query &= R().type.oneof(['purchase', 'cancel', 'change'])
+    query &= R().product.id.oneof(GOOGLE_PRODUCTS)
+    if parameters.get('date') and parameters['date']['after'] != '':
+        query &= R().events.created.at.ge(parameters['date']['after'])
+        query &= R().events.created.at.le(parameters['date']['before'])
+    if parameters.get('mkp') and parameters['mkp']['all'] is False:
+        query &= R().marketplace.id.oneof(parameters['mkp']['choices'])
+    if parameters.get('connection_type') and parameters['connection_type']['all'] is False:
+        query &= R().asset.connection.type.oneof(parameters['connection_type']['choices'])
+    if parameters.get('status') and parameters['status']['all'] is False:
+        query &= R().status.oneof(parameters['status']['choices'])
+    else:
+        query &= R().status.oneof(['active', 'suspended', 'terminated', 'terminating'])
 
-    requests = connect_client.requests.filter(asset__id=subscription_id, status='approved').filter(query).select(
-        '-asset.configuration',
-        '-asset.marketplace',
-        '-asset.contract',
-        '-asset.tiers',
-        '-activation_key',
-        '-template'
-    )
-    purchase = connect_client.requests.filter(asset__id=subscription_id, status='approved', type='purchase').first()
-    # Case where purchase failed for terminated subscription
-    if not purchase:
-        return []
-    purchase_date = purchase.get('effective_date')
-    cancel = connect_client.requests.filter(asset__id=subscription_id, status='approved', type='cancel').first()
-    cancel_date = None if not cancel else cancel.get('effective_date')
+    return client.ns('subscriptions').assets.filter(query)
 
-    records = []
-    for request in requests:
-        effective_date = convert_to_datetime(request['effective_date'])
-        record = {}
-        record['month_year'] = f'{effective_date.month}-{effective_date.year}'
-        record['vendor_subscription_id'] = entitlement_id
-        record['subscription'] = subscription
-        record['google_subscription'] = google_subscription
-        record['quantity'] = request['asset']['items'][0]['quantity']
-        record['start_date'] = purchase_date
-        record['end_date'] = cancel_date
-        start_date = convert_to_datetime(purchase.get('updated'))
-        record['charge_date'] = effective_date
-        if request['type'] == 'purchase':
-            purchase_type = parameter_value('purchase_type', request['asset']['params'])
-            record['charge_type'] = 'Transfer' if purchase_type == 'Transfer' else 'New Subscription'
-        elif request['type'] == 'change':
-            less_than_a_year = abs((effective_date - start_date).days) < 365
-            record['charge_type'] = 'Change' if less_than_a_year else 'Renewal Change'
-            old_quant = int(request['asset']['items'][0]['old_quantity'])
-            current_quant = int(request['asset']['items'][0]['quantity'])
-            record['quantity'] = current_quant - old_quant
-        elif request['type'] == 'cancel':
-            record['charge_type'] = 'Cancel'
-        records.append(record)
-
-    records = _add_renewals(records, subscription, google_subscription, purchase_date, cancel_date, params, connect_client)
-
-    return records
+def calculate_period(delta, uom):
+    if delta == 1:
+        if uom == 'monthly':
+            return 'Monthly'
+        return 'Yearly'
+    else:
+        if uom == 'monthly':
+            return f'{int(delta)} Months'
+        return f'{int(delta)} Years'
 
 
-def _add_renewals(records, subscription, google_subscription, purchase_date, cancel_date, params, connect_client):
-    period = subscription.get('billing', {}).get('period', {}).get('uom')
-    renewal_dates = _get_renewal_dates(purchase_date, cancel_date, period, params)
-    for renewal_date in renewal_dates:
-        query = R()
-        query &= R().updated.le(renewal_date.isoformat())
-        last_order = connect_client.requests.filter(asset__id=subscription.get('id'), status='approved') \
-            .filter(query).order_by('-updated').first()
-        record = {
-            'month_year': f'{renewal_date.month}-{renewal_date.year}',
-            'subscription': subscription,
-            'google_subscription': google_subscription,
-            'charge_type': 'Renewal',
-            'charge_date': renewal_date,
-            'start_date': purchase_date,
-            'end_date': cancel_date,
-            'quantity': '-' if not last_order else last_order['asset']['items'][0]['quantity']
-
-        }
-        records.append(record)
-
-    return records
-
-def _get_renewal_dates(purchase_date, cancel_date, period, params):
-    renewal_dates = []
-    start_date = convert_to_datetime(params['date']['after'].replace('Z', ''))
-    end_date = convert_to_datetime(params['date']['before'].replace('Z', ''))
-    purchase_start = convert_to_datetime(purchase_date)
-    if cancel_date:
-        end_date = convert_to_datetime(cancel_date)
-    if period == 'yearly':
-        difference_year1 = start_date.year - purchase_start.year
-        date1 = purchase_start + relativedelta(years=+difference_year1)
-        if start_date <= date1 <= end_date and difference_year1 > 0:
-            renewal_dates.append(date1)
-        if start_date.year != end_date.year:
-            difference_year2 = end_date.year - purchase_start.year
-            date2 = purchase_start + relativedelta(years=+difference_year2)
-            if start_date <= date2 <= end_date and difference_year2 > 0:
-                renewal_dates.append(date2)
-    if period == 'monthly':
-        difference_month1 = (start_date.year - purchase_start.year) * 12 + start_date.month - purchase_start.month
-        date1 = purchase_start + relativedelta(months=+difference_month1)
-        if start_date <= date1 <= end_date and difference_month1 > 0:
-            renewal_dates.append(date1)
-        if start_date.month != end_date.month:
-            difference_month2 = (end_date.year - purchase_start.year) * 12 + end_date.month - purchase_start.month
-            date2 = purchase_start + relativedelta(months=+difference_month2)
-            if start_date <= date2 <= end_date and difference_month2 > 0:
-                renewal_dates.append(date2)
-
-    return renewal_dates
+def search_product_primary(parameters):
+    for param in parameters:
+        if param['constraints'].get('reconciliation'):
+            return param['name']
 
 
 def _process_google_subscription(subscription, google_client):
@@ -278,75 +149,41 @@ def _process_google_data(google_subscription):
     entitlement_data = google_subscription.get('entitlement_data', {})
     sku = entitlement_data.get('sku', {})
 
+    data['sku'] = sku.get('name', '-')
     data['product'] = sku.get('product', {}).get('name', '-')
+    data['sku_display_name'] = sku.get('marketing_info', {}).get('display_name', '-')
+    data['offer_id'] = entitlement_data.get('name', '-')
     data['num_units'] = get_google_parameter('num_units', google_subscription.get('parameters', {})).get(
         'value', {}).get('int64_value', '-')
     data['max_units'] = get_google_parameter('max_units', google_subscription.get('parameters', {})).get(
+        'value', {}).get('int64_value', '-')
+    data['assigned_units'] = get_google_parameter('assigned_units', google_subscription.get('parameters', {})).get(
         'value', {}).get('int64_value', '-')
     data['effective_price'] = get_price(entitlement_data.get(
         'price_by_resources', [{}])[0].get('price', {}).get('effective_price', {}))
     data['base_price'] = get_price(entitlement_data.get(
         'price_by_resources', [{}])[0].get('price', {}).get('base_price', {}))
-    data['discount'] = entitlement_data.get('price_by_resource', [{}])[0].get('price', {}).get('discount', '-')
     data['created_time'] = google_subscription.get('create_time', '-')
     data['commitment_start_date'] = google_subscription.get('commitment_settings', {}).get('start_time', '-')
     data['commitment_end_date'] = google_subscription.get('commitment_settings', {}).get('end_time', '-')
+    data['renewal_status'] = get_value(
+        google_subscription.get('commitment_settings', ''), 'renewal_settings', 'enable_renewal')
+    data['status'] = get_entitlement_status(google_subscription.get('provisioning_state'))
+    data['suspension_reasons'] = get_suspension_reasons(google_subscription.get('suspension_reasons', [-1])[0])
+    data['purchase_order_id'] = google_subscription.get('purchase_order_id', '-')
     data['error'] = google_subscription.get('error', '-')
 
     return data
 
 
-def _process_line(order):
-    subscription = order.get('subscription')
-    item_name, item_mpn, item_period = get_item_data(subscription.get('items', []))
-    google_subscription = order.get('google_subscription')
-    google_data = _process_google_data(google_subscription)
-
-    return (
-        order.get('month_year'),
-        subscription.get('id'),
-        subscription.get('external_id', '-'),
-        subscription.get('external_uid', '-'),
-        subscription.get('vendor_subscription_id'),
-        order.get('charge_type'),
-        item_name,
-        item_mpn,
-        item_period,
-        order.get('quantity'),
-        order.get('consumption'),
-        google_data['base_price'],
-        google_data['effective_price'],
-        google_data['discount'],
-        get_value(subscription.get('tiers', ''), 'customer', 'name'),
-        get_value(subscription.get('tiers', ''), 'customer', 'external_id'),
-        get_value(subscription.get('tiers', ''), 'customer', 'email'),
-        get_value(subscription.get('tiers', ''), 'tier1', 'name'),
-        get_value(subscription.get('tiers', ''), 'tier1', 'external_id'),
-        subscription.get('marketplace', {}).get('name'),
-        get_value(subscription['connection'], 'hub', 'name'),
-        get_value(subscription, 'product', 'name'),
-        order.get('charge_date'),
-        subscription.get('status'),
-        order.get('start_date'),
-        order.get('end_date'),
-        exported_at,
-        google_data['error'],
-    )
-
-
-def get_google_parameter(value, params):
+def _get_consumed_value_from_usage(client, subscription):
     try:
-        return list(filter(lambda param: param['name'] == value, params))[0]
-    except (IndexError, KeyError, TypeError):
-        return {}
-
-
-def get_entitlement_id(params):
-    param_value = parameter_value('entitlement_id', params, "")
-    if not param_value:
-        return param_value
-    entitlement_id = param_value.strip('["]')
-    return entitlement_id
+        record = client.get(f'/usage/records?asset.id={subscription["id"]}&ordering(-created_time)&limit=1&offset=0')
+        if len(record) == 0:
+            return '-'
+        return record[0].get('usage', '-')
+    except Exception:
+        return '-'
 
 
 def get_item_data(items):
@@ -358,9 +195,112 @@ def get_item_data(items):
         for item in items:
             if 'GOOGLE_DRIVE_STORAGE' in item.get('mpn'):
                 return 'Google Drive Storage', 'GOOGLE_DRIVE_STORAGE', item.get('period')
-
         return items[0]['display_name'], items[0]['mpn'], items[0]['period']
 
 
-class ReportException(Exception):
-    pass
+def _process_line(subscription, google_client, connect_client):
+    params = subscription.get('params', [])
+    item_name, item_mpn = get_item_data(subscription.get('items', []))
+    google_subscription = _process_google_subscription(subscription, google_client)
+    google_data = _process_google_data(google_subscription)
+    consumption = _get_consumed_value_from_usage(connect_client, subscription)
+
+    return (
+        subscription.get('id'),
+        subscription.get('external_id', '-'),
+        get_entitlement_id(params),
+        get_value(subscription, 'connection', 'type'),
+        parameter_value('purchase_type', params),
+        parameter_value('domain', params),
+        parameter_value('customer_id', params),
+        item_name,
+        item_mpn,
+        google_data['sku'],
+        google_data['product'],
+        google_data['offer_id'],
+        google_data['sku_display_name'],
+        next(iter(subscription.get('items', [])), {}).get('quantity', '-'),
+        consumption,
+        google_data['num_units'],
+        google_data['max_units'],
+        google_data['assigned_units'],
+        google_data['base_price'],
+        google_data['effective_price'],
+        convert_to_datetime(subscription['events']['created']['at']),
+        convert_to_datetime(subscription['events']['updated']['at']),
+        google_data['created_time'],
+        google_data['commitment_start_date'],
+        google_data['commitment_end_date'],
+        google_data['renewal_status'],
+        subscription.get('status'),
+        google_data['status'],
+        google_data['suspension_reasons'],
+        google_data['purchase_order_id'],
+        calculate_period(
+            subscription['billing']['period']['delta'],
+            subscription['billing']['period']['uom'],
+        ) if 'billing' in subscription else '-',
+        subscription.get('billing', {}).get('anniversary', {}).get('day', '-'),
+        subscription.get('billing', {}).get('anniversary', {}).get('month', '-'),
+        subscription['contract']['id'] if 'contract' in subscription else '-',
+        subscription['contract']['name'] if 'contract' in subscription else '-',
+        get_value(subscription.get('tiers', ''), 'customer', 'id'),
+        get_value(subscription.get('tiers', ''), 'customer', 'name'),
+        get_value(subscription.get('tiers', ''), 'customer', 'external_id'),
+        get_value(subscription.get('tiers', ''), 'tier1', 'id'),
+        get_value(subscription.get('tiers', ''), 'tier1', 'name'),
+        get_value(subscription.get('tiers', ''), 'tier1', 'external_id'),
+        get_value(subscription.get('tiers', ''), 'tier2', 'id'),
+        get_value(subscription.get('tiers', ''), 'tier2', 'name'),
+        get_value(subscription.get('tiers', ''), 'tier2', 'external_id'),
+        get_value(subscription['connection'], 'provider', 'id'),
+        get_value(subscription['connection'], 'provider', 'name'),
+        get_value(subscription['connection'], 'vendor', 'id'),
+        get_value(subscription['connection'], 'vendor', 'name'),
+        get_value(subscription, 'product', 'id'),
+        get_value(subscription, 'product', 'name'),
+        get_value(subscription['connection'], 'hub', 'id'),
+        get_value(subscription['connection'], 'hub', 'name'),
+        google_data['error'],
+    )
+
+
+def get_google_parameter(value, params):
+    try:
+        return list(filter(lambda param: param['name'] == value, params))[0]
+    except (IndexError, KeyError, TypeError):
+        return {}
+
+
+def get_entitlement_status(value):
+    if value == 0:
+        return "unspecified"
+    if value == 1:
+        return "active"
+    if value == 5:
+        return "suspended"
+    return '-'
+
+
+def get_suspension_reasons(value):
+    if value == 0:
+        return 'SUSPENSION_REASON_UNSPECIFIED'
+    if value == 1:
+        return 'RESELLER_INITIATED'
+    if value == 2:
+        return 'TRIAL_ENDED'
+    if value == 3:
+        return 'RENEWAL_WITH_TYPE_CANCEL'
+    if value == 4:
+        return 'PENDING_TOS_ACCEPTANCE'
+    if value == 100:
+        return 'OTHER '
+    return '-'
+
+
+def get_entitlement_id(params):
+    param_value = parameter_value('entitlement_id', params, "")
+    if not param_value:
+        return param_value
+    entitlement_id = param_value.strip('["]')
+    return entitlement_id
