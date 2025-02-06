@@ -11,7 +11,7 @@ HEADERS = ['Request ID', 'Subscription ID', 'Subscription External ID',
            'Param 1', 'Param 2', 'Item ID', 'Item Name', 'Item Period', 'Item MPN', 'Item Quantity',
            'Provider  ID', 'Provider Name', 'HUB ID', 'HUB Name',
            'Marketplace', 'Product ID', 'Product Name', 'Vendor ID', 'Vendor Name',
-           'Subscription Status', 'Request Status',
+           'Subscription Status', 'Assignee', 'Request Status',
            'Effective Date', 'Creation Date', 'Transaction Type', 'Connection Type', 'Exported At']
 
 
@@ -63,23 +63,29 @@ def generate(client, parameters, progress_callback):
             progress_callback(progress, total)
 
         for item in request['asset']['items']:
+            item_name = ''
+            item_period = ''
+            item_mpn = ''
+            item_quantity = ''
+            item_id = ''
             if item['quantity'] != 'unlimited' and float(item['quantity']) > 0:
                 item_name = item['display_name']
                 item_period = item['period']
                 item_mpn = item['mpn']
                 item_quantity = item['quantity']
                 item_id = item['id']
-                yield (
+
+            yield (
                     get_basic_value(request, 'id'),  # Request ID
                     get_value(request, 'asset', 'id'),  # Subscription ID
                     get_value(request, 'asset', 'external_id'),  # Subscription External ID
                     param1,  # Subscription param 1 value
                     param2,  # Subscription param 2 value
-                    item_id,
                     item_name,
                     item_period,
                     item_mpn,
                     item_quantity,
+                    item_id,
                     get_value(request['asset']['connection'], 'provider', 'id'),  # Provider ID
                     get_value(request['asset']['connection'], 'provider', 'name'),  # Provider Name
                     get_value(request['asset']['connection'], 'hub', 'id'),  # HUB Id
@@ -90,6 +96,7 @@ def generate(client, parameters, progress_callback):
                     get_value(request['asset']['connection'], 'vendor', 'id'),  # Vendor Id
                     get_value(request['asset']['connection'], 'vendor', 'name'),  # Vendor Name
                     get_value(request, 'asset', 'status'),  # Subscription Status
+                    get_value(request, 'assignee', 'name'),  # Assignee
                     get_basic_value(request, 'status'),  # Request Status
                     convert_to_datetime(
                         get_basic_value(request, 'effective_date'),  # Effective  Date
@@ -100,8 +107,42 @@ def generate(client, parameters, progress_callback):
                     get_basic_value(request, 'type'),  # Transaction Type,
                     get_basic_value(request['asset']['connection'], 'type'),  # Connection Type,
                     today_str(),  # Exported At
-                )
-                continue
+        )
+        if len(request['asset']['items']) == 0:
+            yield (
+                get_basic_value(request, 'id'),  # Request ID
+                get_value(request, 'asset', 'id'),  # Subscription ID
+                get_value(request, 'asset', 'external_id'),  # Subscription External ID
+                param1,  # Subscription param 1 value
+                param2,  # Subscription param 2 value
+                'item_name',
+                'item_period',
+                'item_mpn',
+                'item_quantity',
+                'item_id',
+                get_value(request['asset']['connection'], 'provider', 'id'),  # Provider ID
+                get_value(request['asset']['connection'], 'provider', 'name'),  # Provider Name
+                get_value(request['asset']['connection'], 'hub', 'id'),  # HUB Id
+                get_value(request['asset']['connection'], 'hub', 'name'),  # HUB Name
+                get_value(request, 'marketplace', 'name'),  # Marketplace
+                get_value(request['asset'], 'product', 'id'),  # Product ID
+                get_value(request['asset'], 'product', 'name'),  # Product Name
+                get_value(request['asset']['connection'], 'vendor', 'id'),  # Vendor Id
+                get_value(request['asset']['connection'], 'vendor', 'name'),  # Vendor Name
+                get_value(request, 'asset', 'status'),  # Subscription Status
+                get_value(request, 'assignee', 'name'),  # Assignee
+                get_basic_value(request, 'status'),  # Request Status
+                convert_to_datetime(
+                    get_basic_value(request, 'effective_date'),  # Effective  Date
+                ),
+                convert_to_datetime(
+                    get_basic_value(request, 'created'),  # Creation  Date
+                ),
+                get_basic_value(request, 'type'),  # Transaction Type,
+                get_basic_value(request['asset']['connection'], 'type'),  # Connection Type,
+                today_str(),  # Exported At
+            )
+        continue
         progress += 1
         progress_callback(progress, total)
 

@@ -11,7 +11,7 @@ from .utils import (get_value, get_basic_value, convert_to_datetime, today_str,
 
 HEADERS = ['Month Year', 'Subscription ID', 'Subscription External ID',
            'Subscription External UUID', 'Vendor Subscription Id',
-           'Item Name', 'Item MPN', 'Item Period', 'Quantity',
+           'Item Name', 'Item MPN', 'Item Period', 'Quantity', 'Consumption',
            'Customer Name', 'Customer External ID', 'Customer Email',
            'Tier 1 Name', 'Tier 1 External ID',
            'Marketplace', 'Hub Name', 'Product Name', 'Subscription Status',
@@ -33,19 +33,23 @@ def generate(
     for subscription in subscriptions:
         subscription_active_periods = {}
         requests = _get_approved_requests(client, get_basic_value(subscription, 'id'))
+        # consumption = _get_consumption(client, get_basic_value(subscription, 'id'))
         item_per_date_list = {}
 
         product_name = get_value(subscription, 'product', 'name')
-        kaspersky_sub_id = ''
-        team_id = ''
+        vendor_sub_id = ''
 
         for param in subscription['params']:
-            if get_basic_value(param, 'id') == 'KasperskySubscriptionId':
-                kaspersky_sub_id = get_basic_value(param, 'value')
-            if get_basic_value(param, 'id') == 'team_name':
-                kaspersky_sub_id = get_basic_value(param, 'value')
-            if get_basic_value(param, 'id') == 'subscription_id':
-                kaspersky_sub_id = get_basic_value(param, 'value')
+            if get_basic_value(param, 'name') == 'KasperskySubscriptionId':
+                vendor_sub_id = get_basic_value(param, 'value')
+            if get_basic_value(param, 'name') == 'team_name':
+                vendor_sub_id = get_basic_value(param, 'value')
+            if get_basic_value(param, 'name') == 'entitlement_id':
+                vendor_sub_id = get_basic_value(param, 'value')
+            if get_basic_value(param, 'name') == 'subscription_id':
+                vendor_sub_id = get_basic_value(param, 'value')
+            if get_basic_value(param, 'name') == 'CorporateEmailAddress':
+                vendor_sub_id = get_basic_value(param, 'value')
 
         # get subscription active periods
         period_number = 1
@@ -110,8 +114,8 @@ def generate(
 
                     else:
                         # Solo las anuales para reporte Dell
-                        if period.lower().__contains__('month'):
-                            continue
+                        # if period.lower().__contains__('month'):
+                        #    continue
 
                         date_period: datetime = start
                         last_date = end
@@ -164,11 +168,12 @@ def generate(
                         get_basic_value(subscription, 'id'),  # Subscription ID
                         get_basic_value(subscription, 'external_id'),  # Subscription External ID
                         get_basic_value(subscription, 'external_uid'),  # Subscription External UUID
-                        kaspersky_sub_id,  # Kaspersky Subscription Id
+                        vendor_sub_id,  # Kaspersky Subscription Id
                         subscription_period.Item_name,  # Item Name
                         subscription_period.Item_mpn,  # Item MPN
                         subscription_period.Period,  # Item Period
                         int(qty),  # Quantity
+                        0,
                         get_value(subscription['tiers'], 'customer', 'name'),  # Customer Name
                         get_value(subscription['tiers'], 'customer', 'external_id'),  # Customer External ID
                         get_value(subscription['tiers']['customer']['contact_info'], 'contact', 'email'),
@@ -189,7 +194,7 @@ def generate(
 
 
 def _get_subscriptions(client, parameters):
-    # All the subscriptions created before the end of the period in the report.
+    # All the subscriptions created during the report period.
     subs_types = ['active', 'suspended', 'terminating', 'terminated']
 
     query = R()
@@ -221,3 +226,11 @@ def _get_approved_requests(client, asset_id):
     query &= R().asset.id.oneof([str(asset_id)])
 
     return client.requests.filter(query).order_by("created")
+
+def _get_consumption(client, asset_id):
+    # Consumed
+    query = R()
+    query &= R().asset.id.oneof([str(asset_id)])
+
+    return client.usage.aggregates.filter(query)
+

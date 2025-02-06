@@ -8,12 +8,16 @@ from reports.approved_requests import utils
 from reports.approved_requests.api_calls import request_approved_requests
 
 ADOBE_PARAMS = ['adobe_vip_number', 'adobe_order_id', 'transfer_id', 'action_type', 'adobe_user_email',
-                'adobe_customer_id',
-                'discount_group']
+                'adobe_customer_id', 'discount_group']
 NCE_PARAMS = ['subscription_id', 'csp_order_id', 'nce_migration_id', 'migration_type', 'microsoft_domain',
               'ms_customer_id', 'cart_id']
+AZURE_PARAMS = ['microsoft_subscription_id', 'microsoft_order_id', '', '', 'microsoft_domain',
+              'customer_id', '']
+AZURE_RI_PARAMS = ['asset_recon_id', '', '', '', 'microsoft_domain',
+              'customer_id', '']
 ADOBE_PRODUCT = 'PRD-463-843-541'
 AZURE_PRODUCT = 'PRD-561-716-033'
+AZURE_RI_PRODUCT = 'PRD-275-843-418'
 
 AZURE_PRODUCT_ID = 'DZH318Z0BPS6'
 
@@ -45,11 +49,18 @@ def generate(client, parameters, progress_callback, renderer_type=None, extra_co
             param_currency = utils.get_param_value(request['asset']['configuration']['params'], 'Adobe_Currency')
 
         else:
-            if product_id == AZURE_PRODUCT:
+            if product_id == AZURE_RI_PRODUCT:
+                param_action = ''
+                param_order_number = ''
+                param_transfer_number =''
+                param_subscription_number = utils.get_param_value(parameters_list, 'asset_recon_id')
+                param_user_email = utils.get_param_value(parameters_list, 'microsoft_domain')
+                param_cloud_program_id = utils.get_param_value(parameters_list, 'customer_id')
+            elif product_id == AZURE_PRODUCT:
                 param_subscription_number = utils.get_param_value(parameters_list, 'microsoft_subscription_id')
                 param_order_number = utils.get_param_value(parameters_list, 'microsoft_order_id')
-                param_transfer_number = utils.get_param_value(parameters_list, 'nce_migration_id')
-                param_action = utils.get_param_value(parameters_list, 'migration_type')
+                param_transfer_number = utils.get_param_value(parameters_list, 'microsoft_plan_subscription_id')
+                param_action = utils.get_param_value(parameters_list, 'microsoft_entitlement_id')
                 param_user_email = utils.get_param_value(parameters_list, 'microsoft_domain')
                 param_cloud_program_id = utils.get_param_value(parameters_list, 'customer_id')
             else:
@@ -73,11 +84,11 @@ def generate(client, parameters, progress_callback, renderer_type=None, extra_co
                 utils.get_basic_value(request, 'id'),  # Request ID
                 utils.get_value(request, 'asset', 'id'),  # Connect Subscription ID
                 utils.get_value(request, 'asset', 'external_id'),  # End Customer Subscription ID
-                param_action,  # Type of Purchase
-                param_order_number,  # Adobe Order #
-                param_transfer_number,  # Adobe Transfer ID #
-                param_subscription_number,  # VIP #
-                param_cloud_program_id,  # Adobe Cloud Program ID
+                param_action,  # Action
+                param_order_number,  # Vendor Order #
+                param_transfer_number,  # Vendor Transfer #
+                param_subscription_number,  # Vendor Subscription #
+                param_cloud_program_id,  # Vendor Customer ID
                 param_discount_level,  # Pricing SKU Level (Volume Discount level)
                 utils.get_basic_value(item, 'display_name'),  # Product Description
                 sku,  # Part Number
@@ -85,7 +96,8 @@ def generate(client, parameters, progress_callback, renderer_type=None, extra_co
                 utils.get_basic_value(item, 'quantity'),  # Cumulative Seat
                 delta_str,  # Order Delta
                 utils.get_value(request['asset']['tiers'], 'tier1', 'id'),  # Reseller ID
-                utils.get_value(request['asset']['tiers'], 'tier1', 'external_uid'),  # Reseller External ID
+                utils.get_value(request['asset']['tiers'], 'tier1', 'external_uid'),  # Reseller External UID
+                utils.get_value(request['asset']['tiers'], 'tier1', 'external_id'),  # Reseller External ID
                 utils.get_value(request['asset']['tiers'], 'tier1', 'name'),  # Reseller Name
                 utils.get_value(request['asset']['tiers'], 'customer', 'name'),  # End Customer Name
                 utils.get_value(request['asset']['tiers'], 'customer', 'external_id'),  # End Customer External ID

@@ -96,12 +96,6 @@ def calculate_period(delta, uom):
         return f'{int(delta)} Years'
 
 
-def search_product_primary(parameters):
-    for param in parameters:
-        if param['constraints'].get('reconciliation'):
-            return param['name']
-
-
 def _process_google_subscription(subscription, google_client):
     params = subscription.get('params', [])
     google_customer_id = parameter_value('customer_id', params, "")

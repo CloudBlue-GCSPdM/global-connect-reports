@@ -64,44 +64,48 @@ def generate(client, parameters, progress_callback):
             products = []
 
         for product in products:
-            items = _get_items(client, product['id'])
-            items = PRODUCT_ITEMS[product['id']]
-            for item in items:
-                yield (
-                    vendor_id,  # Vendor ID
-                    product['vendor_name'],  # Vendor Name
-                    product['id'],  # Product ID
-                    product['product_name'],  # Product Name
-                    product['status'],  # Product Status
-                    product['version'],  # Product Version
-                    product['category'],  # Category
-                    product['description'],  # Product Description
-                    product['suspend_resume'],  # Supports Suspend
-                    product['requires_reseller'],  # Requires Reseller Auth.
-                    product['ppu'],  # Pay-as-you-go capability.
-                    get_basic_value(contract, 'id'),  # Contract ID
-                    get_basic_value(contract, 'type'),  # Contract type
-                    get_basic_value(contract, 'kind'),  # Contract kind
-                    get_basic_value(contract, 'name'),  # Contract Name
-                    get_basic_value(contract, 'version'),  # Contract Version
-                    get_basic_value(contract, 'status'),  # Contract Status
-                    get_value(contract, 'marketplace', 'name'),  # Marketplace
-                    get_value(contract, 'owner', 'name'),  # Provider Name
-                    convert_to_datetime(
-                        get_value(contract, 'activation', 'date'),  # Signed  Date
-                    ),
-                    get_basic_value(item, 'id'),  # Item ID
-                    get_basic_value(item, 'name'),  # Item Name
-                    get_basic_value(item, 'status'),  # Item Status
-                    get_basic_value(item, 'mpn'),  # Item MPN
-                    get_basic_value(item, 'type'),  # Item Type
-                    get_basic_value(item, 'period'),  # Item Period
-                    get_basic_value(item, 'description'),  # item description
-                    today_str(),  # Exported At
-                )
+            yield from _process_items(contract, product, vendor_id)
 
         progress += 1
         progress_callback(progress, total)
+
+
+def _process_items(contract, product, vendor_id):
+    items = PRODUCT_ITEMS[product['id']]
+    for item in items:
+        yield (
+            vendor_id,  # Vendor ID
+            product['vendor_name'],  # Vendor Name
+            product['id'],  # Product ID
+            product['product_name'],  # Product Name
+            product['status'],  # Product Status
+            product['version'],  # Product Version
+            product['category'],  # Category
+            product['description'],  # Product Description
+            product['suspend_resume'],  # Supports Suspend
+            product['requires_reseller'],  # Requires Reseller Auth.
+            product['ppu'],  # Pay-as-you-go capability.
+            get_basic_value(contract, 'id'),  # Contract ID
+            get_basic_value(contract, 'type'),  # Contract type
+            get_basic_value(contract, 'kind'),  # Contract kind
+            get_basic_value(contract, 'name'),  # Contract Name
+            get_basic_value(contract, 'version'),  # Contract Version
+            get_basic_value(contract, 'status'),  # Contract Status
+            get_value(contract, 'marketplace', 'name'),  # Marketplace
+            get_value(contract, 'marketplace', 'id'),  # Marketplace ID
+            get_value(contract, 'owner', 'name'),  # Provider Name
+            convert_to_datetime(
+                get_value(contract, 'activation', 'date'),  # Signed  Date
+            ),
+            get_basic_value(item, 'id'),  # Item ID
+            get_basic_value(item, 'name'),  # Item Name
+            get_basic_value(item, 'status'),  # Item Status
+            get_basic_value(item, 'mpn'),  # Item MPN
+            get_basic_value(item, 'type'),  # Item Type
+            get_basic_value(item, 'period'),  # Item Period
+            get_basic_value(item, 'description'),  # item description
+            today_str(),  # Exported At
+        )
 
 
 def _get_products(client, parameters):

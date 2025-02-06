@@ -96,7 +96,7 @@ def generate(client, parameters, progress_callback):
                 get_value(record, 'item', 'id'),  # Item ID
                 get_value(record, 'item', 'name'),  # Item Name
                 get_value(record, 'item', 'mpn'),  # Item MPN
-                get_basic_value(record, 'usage'),  # Quantity
+                get_basic_value(record, 'amount'),  # Quantity
                 msrp,  # MSRP
                 cost,  # Cost
                 price,  # Price
@@ -137,5 +137,11 @@ def _get_usage_records(client, parameters):
         query &= R().status.oneof(parameters['ur_status']['choices'])
     else:
         query &= R().status.oneof(['valid', 'approved', 'closed'])
+
+    if parameters.get('mkp') and parameters['mkp']['all'] is False:
+        query &= R().marketplace.id.oneof(parameters['mkp']['choices'])
+
+    if parameters.get('hub'):
+        query &= R().hub.id.oneof(parameters['hub'].split(sep="|"))
 
     return client.ns('usage').collection('records').filter(query)

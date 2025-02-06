@@ -8,7 +8,7 @@ from connect.client.rql import R
 from reports.subscriptions_report.utils import (get_value, get_basic_value, convert_to_datetime, today_str)
 
 HEADERS = ['Request ID', 'Subscription ID', 'Subscription External ID',
-           'Provider  ID', 'Provider Name',
+           'Provider  ID', 'Provider Name', 'Param 1', 'Param 2',
            'Marketplace', 'Product ID', 'Product Name', 'Vendor ID', 'Vendor Name',
            'Subscription Status', 'Request Status', 'Failure Reason', 'Assignee',
            'Effective Date', 'Updated Date', 'Creation Date', 'Transaction Type', 'Connection Type', 'Exported At']
@@ -38,6 +38,21 @@ def generate(client=None, parameters=None, progress_callback=None, renderer_type
     total = requests.count() + 1
 
     for request in requests:
+        param1 = ''
+        param2 = ''
+
+        if 'params' in request['asset'] and 'parameter_id' in parameters and len(str(parameters['parameter_id'])) > 0:
+            i = 0
+            for param_requested in parameters['parameter_id'].split(sep="|"):
+                for param in request['asset']['params']:
+                    if param_requested == get_basic_value(param, 'id'):
+                        if i == 0:
+                            param1 = get_basic_value(param, 'value')
+                            HEADERS[5] = get_basic_value(param, 'name')
+                        elif i == 1:
+                            param2 = get_basic_value(param, 'value')
+                            HEADERS[5] = get_basic_value(param, 'name')
+                        i = i + 1
 
         if progress == 0:
             yield HEADERS
@@ -51,6 +66,8 @@ def generate(client=None, parameters=None, progress_callback=None, renderer_type
             get_value(request, 'asset', 'external_id'),  # Subscription External ID
             get_value(request['asset']['connection'], 'provider', 'id'),  # Provider ID
             get_value(request['asset']['connection'], 'provider', 'name'),  # Provider Name
+            param1,
+            param2,
             get_value(request, 'marketplace', 'name'),  # Marketplace
             get_value(request['asset'], 'product', 'id'),  # Product ID
             get_value(request['asset'], 'product', 'name'),  # Product Name

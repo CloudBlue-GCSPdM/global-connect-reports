@@ -74,8 +74,12 @@ def generate(client, parameters, progress_callback):
                     get_value(request, 'marketplace', 'name'),  # Marketplace
                     get_value(request['asset'], 'product', 'id'),  # Product ID
                     get_value(request['asset'], 'product', 'name'),  # Product Name
-                    get_value(request['asset']['connection'], 'vendor', 'id'),  # Vendor Id
-                    get_value(request['asset']['connection'], 'vendor', 'name'),  # Vendor Name
+                    get_value(request['asset']['tiers'], 'customer', 'name'),  # Customer Name
+                    get_value(request['asset']['tiers'], 'customer', 'external_id'),  # Customer External ID
+                    get_value(request['asset']['tiers'], 'tier1', 'name'),  # Customer Name
+                    get_value(request['asset']['tiers'], 'tier1', 'external_id'),  # Customer External ID
+                    #  get_value(request['asset']['connection'], 'vendor', 'id'),  # Vendor Id
+                    #  get_value(request['asset']['connection'], 'vendor', 'name'),  # Vendor Name
                     get_value(request, 'asset', 'status'),  # Subscription Status
                     get_basic_value(request, 'status'),  # Request Status
                     message,  # Last Message
@@ -107,8 +111,12 @@ def generate(client, parameters, progress_callback):
                 get_value(request, 'marketplace', 'name'),  # Marketplace
                 get_value(request['asset'], 'product', 'id'),  # Product ID
                 get_value(request['asset'], 'product', 'name'),  # Product Name
-                get_value(request['asset']['connection'], 'vendor', 'id'),  # Vendor Id
-                get_value(request['asset']['connection'], 'vendor', 'name'),  # Vendor Name
+                get_value(request['asset']['tiers'], 'customer', 'name'),  # Customer Name
+                get_value(request['asset']['tiers'], 'customer', 'external_id'),  # Customer External ID
+                get_value(request['asset']['tiers'], 'tier1', 'name'),  # Customer Name
+                get_value(request['asset']['tiers'], 'tier1', 'external_id'),  # Customer External ID
+                #  get_value(request['asset']['connection'], 'vendor', 'id'),  # Vendor Id
+                #  get_value(request['asset']['connection'], 'vendor', 'name'),  # Vendor Name
                 get_value(request, 'asset', 'status'),  # Subscription Status
                 get_basic_value(request, 'status'),  # Request Status
                 message,  # Last Message
@@ -157,6 +165,8 @@ def _get_conversation(client, request_id):
 def _get_last_message(client, conversation_id):
     messages = client.conversations[conversation_id].messages.all().order_by('-created')
     text = ''
-    if messages.count() > 0:
-        text = messages[0]['text']
+    for message in messages:
+        if not str(message['text']).__contains__("Indicator of Service Level Agreement SLA"):
+            text = message['text']
+            break
     return text

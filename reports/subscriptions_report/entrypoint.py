@@ -8,10 +8,12 @@ from connect.client.rql import R
 from .utils import (get_value, get_basic_value, convert_to_datetime, today_str)
 
 HEADERS = ['Subscription ID', 'Subscription External ID',
+           'Anniversary Date', 'Term Delta', 'Term Period',
            'Customer ID', 'Customer Name', 'Customer External ID',
            'Param 1', 'Param 2', 'Item Name', 'Item Period', 'Item MPN', 'Item Quantity',
            'Tier 1 ID', 'Tier 1 Name', 'Tier 1 External ID', 'Tier 2 ID',
            'Tier 2 Name', 'Tier 2 External ID', 'Provider  ID', 'Provider Name',
+           'Hub ID', 'Hub Name', 'Vendor ID', 'Vendor Name',
            'Marketplace', 'Product ID', 'Product Name', 'Subscription Status',
            'Transaction Date', 'Connection Type', 'Exported At']
 
@@ -48,7 +50,7 @@ def generate(client, parameters, progress_callback):
             i = 0
             for param_requested in parameters['parameter_id'].split(sep="|"):
                 for param in subscription['params']:
-                    if param_requested == get_basic_value(param, 'id'):
+                    if param_requested == get_basic_value(param, 'name'):
                         if i == 0:
                             param1 = get_basic_value(param, 'value')
                             HEADERS[16] = get_basic_value(param, 'name')
@@ -78,6 +80,9 @@ def generate(client, parameters, progress_callback):
         yield (
             get_basic_value(subscription, 'id'),  # Subscription ID
             get_basic_value(subscription, 'external_id'),  # Subscription External ID
+            # get_value(subscription, 'billing', 'next_date'),  # Anniversary Date
+            # get_value(subscription['billing'], 'period', 'delta'),  # Term Delta
+            # get_value(subscription['billing'], 'period', 'uom'),  # Term Type
             get_value(subscription['tiers'], 'customer', 'id'),  # Customer ID
             get_value(subscription['tiers'], 'customer', 'name'),  # Customer Name
             get_value(subscription['tiers'], 'customer', 'external_id'),  # Customer External ID
@@ -95,6 +100,10 @@ def generate(client, parameters, progress_callback):
             get_value(subscription['tiers'], 'tier2', 'external_id'),  # Tier 2 External ID
             get_value(subscription['connection'], 'provider', 'id'),  # Provider ID
             get_value(subscription['connection'], 'provider', 'name'),  # Provider Name
+            get_value(subscription['connection'], 'hub', 'id'),  # HUB Id
+            get_value(subscription['connection'], 'hub', 'name'),  # HUB Name
+            get_value(subscription, 'vendor', 'id'),  # Vendor Id
+            get_value(subscription, 'vendor', 'name'),  # Vendor Name
             get_value(subscription, 'marketplace', 'name'),  # Marketplace
             get_value(subscription, 'product', 'id'),  # Product ID
             get_value(subscription, 'product', 'name'),  # Product Name
@@ -110,7 +119,7 @@ def generate(client, parameters, progress_callback):
 
 
 def _get_subscriptions(client, parameters):
-    subs_types = ['active', 'suspended', 'terminating', 'terminated']
+    subs_types = ['active', 'suspended', 'terminating', 'terminated', 'draft']
 
     query = R()
     query &= R().status.oneof(subs_types)
@@ -124,5 +133,8 @@ def _get_subscriptions(client, parameters):
         query &= R().product.id.oneof(parameters['product']['choices'])
     if parameters.get('mkp') and parameters['mkp']['all'] is False:
         query &= R().marketplace.id.oneof(parameters['mkp']['choices'])
+
+    # if 'provider_to_exclude' in parameters and len(parameters['provider_to_exclude'].split(sep="|")) > 0:
+    #    query &= R().connection.provider.id.out(parameters['provider_to_exclude'].split(sep="|"))
 
     return client.ns('subscriptions').assets.filter(query)
